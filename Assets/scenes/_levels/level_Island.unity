@@ -158,7 +158,7 @@ RenderTexture:
   m_TextureSettings:
     serializedVersion: 2
     m_FilterMode: 1
-    m_Aniso: 1
+    m_Aniso: 0
     m_MipBias: 0
     m_WrapU: 1
     m_WrapV: 1
@@ -547,12 +547,12 @@ PrefabInstance:
     - target: {fileID: 3193471337630893609, guid: e70416e3bc35d4004a9981d0ac102ba5,
         type: 3}
       propertyPath: m_Splines.Array.data[0].m_Knots.Array.data[7].Rotation.value.x
-      value: 0.18863371
+      value: 0.18863375
       objectReference: {fileID: 0}
     - target: {fileID: 3193471337630893609, guid: e70416e3bc35d4004a9981d0ac102ba5,
         type: 3}
       propertyPath: m_Splines.Array.data[0].m_Knots.Array.data[7].Rotation.value.y
-      value: -0.45847216
+      value: -0.45847228
       objectReference: {fileID: 0}
     - target: {fileID: 3193471337630893609, guid: e70416e3bc35d4004a9981d0ac102ba5,
         type: 3}
@@ -597,7 +597,7 @@ PrefabInstance:
     - target: {fileID: 3193471337630893609, guid: e70416e3bc35d4004a9981d0ac102ba5,
         type: 3}
       propertyPath: m_Splines.Array.data[0].m_Knots.Array.data[25].Rotation.value.x
-      value: 0.0027483343
+      value: 0.0027483352
       objectReference: {fileID: 0}
     - target: {fileID: 3193471337630893609, guid: e70416e3bc35d4004a9981d0ac102ba5,
         type: 3}
@@ -1964,17 +1964,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Version: 3
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
-  m_LightLayerMask: 1
-  m_RenderingLayers: 1
   m_CustomShadowLayers: 0
-  m_ShadowLayerMask: 1
-  m_ShadowRenderingLayers: 1
   m_LightCookieSize: {x: 1, y: 1}
   m_LightCookieOffset: {x: 0, y: 0}
   m_SoftShadowQuality: 0
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_ShadowRenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_Version: 4
+  m_LightLayerMask: 1
+  m_ShadowLayerMask: 1
+  m_RenderingLayers: 1
+  m_ShadowRenderingLayers: 1
 --- !u!114 &6589000189408555946 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5896135888792882580, guid: e70416e3bc35d4004a9981d0ac102ba5,
