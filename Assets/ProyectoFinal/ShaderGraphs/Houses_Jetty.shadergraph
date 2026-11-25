@@ -1262,8 +1262,8 @@
     "m_ObjectId": "66bf0a637a5e49a3ba7a2ad7411b74cb",
     "m_Title": "Normal",
     "m_Position": {
-        "x": -437.0,
-        "y": -715.0000610351563
+        "x": -436.9999694824219,
+        "y": -715.0001220703125
     }
 }
 
@@ -1351,7 +1351,7 @@
     "m_Title": "Random Emission Offset Delay",
     "m_Position": {
         "x": -785.0,
-        "y": 159.0
+        "y": 158.99993896484376
     }
 }
 
@@ -2344,7 +2344,7 @@
     "m_ObjectId": "b2bb6c5ee4f5405bbea83f1cb99620ef",
     "m_Title": "Metallic, Ambient Occlusion, Smoothness",
     "m_Position": {
-        "x": -530.0,
+        "x": -530.0000610351563,
         "y": 576.0
     }
 }
@@ -2497,7 +2497,7 @@
     "m_Title": "Nighttime Emission",
     "m_Position": {
         "x": -809.0001220703125,
-        "y": -279.0
+        "y": -279.00006103515627
     }
 }
 
@@ -3242,7 +3242,7 @@
     "m_ObjectId": "f3dac4df20dd476da8a2b7813882b7e3",
     "m_Title": "Albedo",
     "m_Position": {
-        "x": -402.0,
+        "x": -402.00006103515627,
         "y": -1161.0
     }
 }
