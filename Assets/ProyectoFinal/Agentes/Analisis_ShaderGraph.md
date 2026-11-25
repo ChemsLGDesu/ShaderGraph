@@ -192,3 +192,129 @@
 ---
 
 *Documento generado automáticamente tras inspección de escena via Unity MCP.*
+---
+
+## 5. Implementación Ejecutada (estado actual)
+
+> Sección añadida tras aplicar los puntos 1 y 2 de `ShaderGraph_Agua_Materiales.md`.
+> Todos los grafos compilan sin errores (`ShaderUtil.GetShaderMessages` = 0 mensajes).
+
+### 5.1 Terreno — `SG_ArenaTerreno.shadergraph` (URP Terrain Lit, reutilizado y extendido)
+
+- Se conservaron los nodos y conexiones originales (cadena de humedad, bloques de superficie y vertex).
+- Se injertó el patrón oficial de *Terrain Simple*: 4 `Terrain Texture` (`_Splat0..3`, `_Normal0..3`, `_Control`, sampler `_Splat0`),
+  `Split Texture Transform` → `Tiling And Offset` → `Sample Texture 2D` por capa.
+- **Base Color**: promedio de las 4 capas de color (`Add` → `/4`) → `Multiply` por la cadena de humedad → `BaseColor`.
+- **Normal (Tangent Space)**: `Sample Texture 2D` de cada normal → `Normal Unpack` → multiplicación por el canal de la control map
+  (R/G/B/A) → `Add` → `Normalize` → bloque `Normal (Tangent Space)`.
+- **Humedad de orilla**: `Position(World) → Split → Smoothstep(Edge1=0.0, Edge2=1.2)` → `Lerp` de `(0.45, 0.42, 0.40)` a `(1,1,1)`,
+  multiplicado por el color del terreno (oscurece la arena cerca del nivel del mar).
+- Material: `Assets/ProyectoFinal/Materials/Terrain.mat` con shader `Shader Graphs/SG_ArenaTerreno`.
+- Asignado en `Island Level/TerrainGroup/Terrain-0-0` y `Terrain-1-0` (`Terrain.materialTemplate`).
+
+### 5.2 Cáusticas — `CausticsNoise.shadersubgraph` + `SG_CausticsProjector.shadergraph`
+
+- `Assets/ProyectoFinal/SubShaders/CausticsNoise.shadersubgraph`: sub-grafo limpio y reutilizable.
+  - 2 octavas de `Simple Noise` animadas con `Time` y velocidades/`Tiling` distintas.
+  - Producto de octavas → `Power` (contraste) → tinte azulado → `Combine` con la máscara en alpha.
+  - Salidas: `Color` (Vector4) y `Mask` (Vector1) para reutilizar en agua u otros receptores.
+- `Assets/ProyectoFinal/ShaderGraphs/SG_CausticsProjector.shadergraph` (**URP Unlit**):
+  - Proyección **world-space**: `Position(World) → Split → Combine(X,Z)` como UV, con `Tiling And Offset` desplazado por `Time`.
+  - 2 octavas de ruido → `Saturate` → `Power(Contrast)` → `Caustics Tint` → `Intensity` → `Base Color` y `Alpha`.
+  - Target transparente con blend **Additive** y `ZWrite` desactivado (patrón estándar de cáusticas proyectadas).
+- Material `Assets/ProyectoFinal/Materials/Caustics.mat` (queue 3001) y objeto `Island Level/CausticsProjector`
+  (quad rotado 90°, Y = -0.15, escala 80×60) que cubre la zona de agua.
+
+### 5.3 Agua — `AnimatedWaterNormals.shadersubgraph` + `SG_Water.shadergraph`
+
+- `Assets/ProyectoFinal/SubShaders/AnimatedWaterNormals.shadersubgraph`:
+  - Propiedades: `Normal Map A/B`, `Normal Tiling`, `Normal Speed A/B`, `Normal Strength`.
+  - Dos `Sample Texture 2D` animadas de forma independiente → `Normal Unpack` → `Add` → `× strength` → `Normalize`.
+  - Salida `Normal` (Vector3, tangent space). Textura por defecto: `Assets/ProyectoFinal/Texturas/normalNoise.png`.
+- `Assets/ProyectoFinal/ShaderGraphs/SG_Water.shadergraph` (**URP Lit**):
+  - Target **Lit / Transparent / Alpha Clipping OFF**, `ZWrite` forzado off.
+  - Normales: doble capa animada equivalente (inline, para no depender de la resolución de slots del `SubGraphNode`) → `NormalTS`.
+  - Color: `Lerp(Deep → Shallow)` y `Lerp(→ Fresnel Color)` usando un Fresnel aproximado
+    `Saturate(Power(1 - dot(ViewDir, up), Fresnel Power))`.
+  - Profundidad: `Screen Position(W) - Scene Depth` → `× Foam Scale` → `Saturate` = factor de orilla;
+    `1 - factor` = máscara de espuma → `Lerp` a `Foam Color`.
+  - Alpha: `Saturate(sceneFade × Opacity + foamMask)`.
+  - `Smoothness` por propiedad (0.92) y especular provisto automáticamente por el pipeline Lit + luz direccional.
+- `Depth Texture` verificada **habilitada** en `PipelineAsset_High`, `PipelineAsset_Medium` y `PipelineAsset_Low`.
+- Material `Assets/ProyectoFinal/Materials/Water.mat` (queue 3000, `_QueueControl = 1`) y plano `Island Level/Water`
+  (Y = 0, escala 100×75, sin collider, sin sombras).
+
+### 5.4 Justificación Lit vs Unlit
+
+| Shader | Tipo elegido | Motivo |
+|--------|--------------|--------|
+| `SG_ArenaTerreno` | Terrain Lit | Necesita blending de TerrainLayers, normales por capa y respuesta a la luz del sol. |
+| `SG_Water` | **Lit** | El agua debe recibir especular del Directional Light, reflejo de Fresnel y responder a la iluminación de la escena; un Unlit plano no produciría el brillo realista ni el specular. |
+| `SG_CausticsProjector` | **Unlit** | Las cáusticas son luz “falsa” ya coloreada: no deben verse afectadas por la iluminación (evita doble sombreado) y se mezclan en modo aditivo, lo que es más barato y estable con blending. |
+
+### 5.5 Pendientes / siguientes iteraciones
+
+1. Conectar la salida `Color/Mask` de `CausticsNoise` como receptor en `SG_ArenaTerreno` con máscara por TerrainLayer.
+2. Añadir refracción screen-space y ondas Gerstner/FFT en `SG_Water`.
+3. Extender el receptor de cáusticas a `Houses_Jetty` (muelle).
+4. Ajustar la altura del plano de agua y la escala de espuma una vez validado el shoreline en juego.
+
+### 5.6 Ajustes finales y validación visual
+
+- **Escena guardada**: `Assets/scenes/ProyectoFinal/ProyectoFinal_ShaderGraph.unity`.
+- **Compilación verificada** con `ShaderUtil.GetShaderMessages` (el `read_console` de MCP devolvía 0 entradas, por lo que se usó un script de diagnóstico vía `execute_code`):
+  - `SG_ArenaTerreno.shadergraph` → 0 mensajes.
+  - `SG_Water.shadergraph` → 0 mensajes (se añadió un `Saturate` antes del `Power` del Fresnel para eliminar el warning `pow(negativo)`).
+  - `SG_CausticsProjector.shadergraph` → 0 mensajes (se saturó el ruido antes del `Power`).
+  - `CausticsNoise.shadersubgraph` y `AnimatedWaterNormals.shadersubgraph` → `SubGraphAsset.isValid = True`.
+- **Textura de normales del agua**: se añadió `Assets/ProyectoFinal/Texturas/WaterNormalSoft.png`
+  (versión suavizada de `normalNoise.png`, 256×256 con mipmaps y filtrado lineal) porque la textura de ruido original,
+  muestreada con tiling alto, producía un patrón de cuadrícula/destellos por aliasing especular (el aspecto de "cuadrícula" reportado).
+  Con la textura suavizada y `Normal Tiling = 6`, `Normal Strength = 0.8` la superficie queda lisa y con reflejos coherentes.
+- **Mipmaps** habilitados también en `normalNoise.png` (`enableMipMap: 1`).
+- **Nivel del agua**: el plano `Island Level/Water` quedó a **Y = -0.5** (≈ 0) y las cáusticas a Y = -0.7.
+  Se bajó medio metro porque las zonas planas de arena del heightmap están exactamente a Y ≈ 0 y el plano, al ser coplanar,
+  producía z-fighting (patrón de cuadros). Con -0.5 el agua cubre la laguna sin intersectar la arena y la orilla queda limpia.
+- **Cáusticas**: quad `Island Level/CausticsProjector` escalado 400×300, rotado 90° (mirando hacia abajo),
+  material aditivo con `Intensity = 1.1`, `Contrast = 2.5`, `Tiling = (6,6)`.
+- **Agua**: `receiveShadows = false` en el renderer y **ZWrite desactivado** en el shader.
+  Parámetros finales del material: `Deep Color (0.01,0.07,0.10)`, `Shallow Color (0.05,0.25,0.30)`,
+  `Fresnel Color (0.20,0.38,0.48)`, `Fresnel Power 3.5`, `Smoothness 0.88`, `Opacity 0.92`, `Foam Scale 2.0`.
+- **Verificación visual**: se renderizó la cámara principal a `RenderTexture` en varias iteraciones
+  (con/sin agua y con/sin cáusticas) para descartar el patrón de cuadrícula y confirmar que
+  terreno (arena seca/húmeda + normales), agua y cáusticas se componen correctamente.
+
+### 5.7 Corrección de cobertura, color y orilla del agua
+
+- **Plano de agua**: `Island Level/Water` pasa de posición `(0, -0.5, -125)` / escala `(100, 1, 75)` a
+  **posición `(0, 0, -125)` / escala `(200, 1, 200)`** (plano de 2000 × 2000 unidades), por lo que rodea
+  por completo `Terrain-0-0` (x −500..0) y `Terrain-1-0` (x 0..500, z −250..250) y desaparece el corte recto
+  que atravesaba el muelle. Las cáusticas se reescalaron a 900 × 800 en `(0, -0.2, -125)` para cubrir la nueva área.
+- **Profundidad correcta en el Shader Graph**: se sustituyó la cadena anterior (Screen Position + Scene Depth − W)
+  por el patrón de `SoftParticles.shadersubgraph`: `Screen Position (Raw) → Split (W)` y
+  `Scene Depth (Linear01) × Camera.FarPlane`, restados entre sí. Se verificó con un shader de diagnóstico temporal
+  (R = depth de escena, G = depth del fragmento, B = diferencia) que la diferencia real es de 1.5–3.5 m;
+  el nodo `Scene Depth Difference` no se pudo usar porque espera una posición relativa a cámara.
+- **Color por profundidad**: `Lerp(Shallow #1FA3A8 → Deep #072B47, Smoothstep(0.3 m, Depth Range))` con `Depth Range = 4 m`.
+- **Opacidad por profundidad**: `Lerp(Opacity Shallow 0.55 → Opacity Deep 0.95, gradiente)` + espuma, saturado (nunca < 0.55).
+- **Fresnel**: tinte azul cielo `(0.45, 0.75, 0.95)` mezclado con `Fresnel Intensity 0.6` sobre `Fresnel Power 4`.
+- **Espuma de orilla**: `1 − Smoothstep(0.02 m, Foam Depth = 0.4 m, profundidad)` → `Lerp` a `Foam Color` blanco
+  y suma a la opacidad, de modo que el contacto con la arena queda blanco y semitransparente.
+- **Normales / reflejos**: `Normal Strength = 1.0`, `Smoothness = 0.92`, doble capa animada a `Tiling 6`.
+- **Verificación**: `SG_Water` compila con **0 mensajes** (`ShaderUtil.GetShaderMessages`), `scriptCompilationFailed = False`
+  y el `Editor.log` no registra errores recientes; material, Shader Graph y escena guardados.
+
+### 5.8 Limpieza de materiales y assets de agua
+
+- `Water.mat` tenía 14 entradas huérfanas (de versiones anteriores del grafo) que provocaban avisos en consola:
+  2 texturas (`Texture2D_ff81…`, `Texture2D_c5c3…`), 5 floats (`Vector1_9a5c…`, `_9c6e…`, `_ae9e…`, `_edea…`, `_f70d…`)
+  y 7 vectores/colores (`Vector2_df09…`, `_71a9…`, `_4e18…`, `Color_4795…`, `_7322…`, `_9c61…`, `_ec2b…`).
+  Se eliminaron con `SerializedObject` (borrado de elementos de `m_SavedProperties`), quedando exactamente las 22
+  propiedades del shader: 5 texturas, 10 floats y 7 vectores/colores, con todos los valores intactos.
+- No existe ningún `SG_WaterSurface` en el proyecto (`Get-ChildItem -Filter *WaterSurface*` solo devuelve
+  `WaterSurfaceData.asset` y texturas del paquete BoatAttack). El único shader de agua es `SG_Water`
+  (más el subgrafo `AnimatedWaterNormals`), y el único material que lo usa es `Assets/ProyectoFinal/Materials/Water.mat`.
+- El sistema de agua del paquete `com.verasl.water-system` (`Sea.mat`, `InfiniteWater.mat`, shaders `BoatAttack/Water`
+  y `Unlit/InfiniteWater`) no está referenciado por la escena, pero pertenece a un paquete de dependencia:
+  no se elimina para no romper prefabs/prefabs de botes.
+- Verificación final: `SG_Water` con 0 mensajes, `scriptCompilationFailed = False`, escena guardada.

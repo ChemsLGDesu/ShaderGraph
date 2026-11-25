@@ -1431,10 +1431,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": -856.0000610351563,
-            "y": 1565.0001220703125,
+            "x": -930.000244140625,
+            "y": 1556.0,
             "width": 208.0,
-            "height": 315.0
+            "height": 314.0001220703125
         }
     },
     "m_Slots": [
@@ -2868,7 +2868,7 @@
     "synonyms": [],
     "m_Precision": 0,
     "m_PreviewExpanded": false,
-    "m_DismissedVersion": 0,
+    "m_DismissedVersion": 2,
     "m_PreviewMode": 0,
     "m_CustomColors": {
         "m_SerializableColors": []
@@ -6514,10 +6514,10 @@
         "m_Expanded": false,
         "m_Position": {
             "serializedVersion": "2",
-            "x": -624.0000610351563,
-            "y": 1565.0001220703125,
-            "width": 221.00001525878907,
-            "height": 326.0
+            "x": -698.0001220703125,
+            "y": 1556.0,
+            "width": 221.0,
+            "height": 325.0001220703125
         }
     },
     "m_Slots": [
@@ -7241,8 +7241,8 @@
     "m_ObjectId": "f250a9d13d1941558784af9502f2ee8b",
     "m_Title": "Main Light",
     "m_Position": {
-        "x": -881.0,
-        "y": 1506.0
+        "x": -955.00048828125,
+        "y": 1496.999755859375
     }
 }
 
